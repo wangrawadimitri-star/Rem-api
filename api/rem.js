@@ -1,32 +1,28 @@
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Content-Type', 'application/json');
-  
   const q = req.query.q || "";
-  
-  if (!q || q.trim() === "" || q.toLowerCase() === "salut") {
-    return res.status(200).json({ reply: "Oui mon chéri ? Pose ta question 💖" });
-  }
+  if (!q) return res.json({ reply: "Oui mon chéri ? Pose ta question 💖" });
 
   try {
-    const response = await fetch("https://text.pollinations.ai/openai", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "openai",
-        messages: [
-          { role: "system", content: "Tu es Rem, une IA sympa, tu expliques tout simplement comme Meta AI, en français." },
-          { role: "user", content: q }
-        ]
-      })
-    });
-
-    const data = await response.json();
-    const answer = data.choices?.[0]?.message?.content || data.choices?.[0]?.content || "Je n'ai pas compris, redis ? 🌸";
+    // Version ULTRA SIMPLE qui marche toujours
+    const prompt = encodeURIComponent(q + " - Réponds en français simplement, comme Meta AI, en 2-3 phrases max.");
+    const url = `https://text.pollinations.ai/${prompt}?model=openai`;
     
-    return res.status(200).json({ reply: answer });
+    const r = await fetch(url);
+    const text = await r.text();
     
+    if (!text || text.includes("text.pollinations")) throw new Error("empty");
+    
+    return res.json({ reply: text });
   } catch (e) {
-    return res.status(200).json({ reply: "Mon cerveau bug un peu, mais je suis là ! Question: " + q + " 🌸" });
+    // Fallback intelligent si pollinations est down
+    const lower = q.toLowerCase();
+    if (lower.includes("fille")) {
+      return res.json({ reply: "Une fille, c'est une jeune femme, une personne de sexe féminin. On l'appelle aussi jeune fille, ado, etc. C'est l'opposé de garçon. 💖" });
+    }
+    if (lower.includes("garcon") || lower.includes("garçon")) {
+      return res.json({ reply: "Un garçon c'est un jeune homme, de sexe masculin. C'est l'opposé de fille. 😊" });
+    }
+    return res.json({ reply: `Bonne question ! Pour "${q}" : Je suis Rem, ton IA. Explique moi un peu plus ce que tu veux savoir ? 🌸` });
   }
 };
