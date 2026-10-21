@@ -1,28 +1,34 @@
-module.exports = async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  const q = req.query.q || "";
-  if (!q) return res.json({ reply: "Oui mon chéri ? Pose ta question 💖" });
+const axios = require("axios");
+const API_REM = "https://rem-api.vercel.app/api/rem";
 
-  try {
-    // Version ULTRA SIMPLE qui marche toujours
-    const prompt = encodeURIComponent(q + " - Réponds en français simplement, comme Meta AI, en 2-3 phrases max.");
-    const url = `https://text.pollinations.ai/${prompt}?model=openai`;
+module.exports = {
+  config: {
+    name: "rem",
+    version: "4.0",
+    author: "Dimu",
+    role: 0,
+    category: "ai",
+    guide: { fr: "rem <question>" }
+  },
+  onStart: async function({ api, event, args }) {
+    const q = args.join(" ").trim();
+    if (!q) return api.sendMessage("🌸 Oui ? Pose ta question !\nEx: rem c'est quoi une fille", event.threadID);
     
-    const r = await fetch(url);
-    const text = await r.text();
-    
-    if (!text || text.includes("text.pollinations")) throw new Error("empty");
-    
-    return res.json({ reply: text });
-  } catch (e) {
-    // Fallback intelligent si pollinations est down
-    const lower = q.toLowerCase();
-    if (lower.includes("fille")) {
-      return res.json({ reply: "Une fille, c'est une jeune femme, une personne de sexe féminin. On l'appelle aussi jeune fille, ado, etc. C'est l'opposé de garçon. 💖" });
+    try {
+      // 1. On essaie direct Pollinations (ça marche toujours)
+      const prompt = encodeURIComponent(q);
+      const res = await axios.get(`https://text.pollinations.ai/${prompt}?model=openai`, { timeout: 15000 });
+      let reply = typeof res.data === 'string' ? res.data : res.data?.choices?.[0]?.message?.content;
+      
+      // 2. Si ça échoue, on essaie ton API
+      if (!reply) {
+        const r2 = await axios.get(`${API_REM}?q=${encodeURIComponent(q)}`);
+        reply = r2.data?.reply;
+      }
+      
+      return api.sendMessage(`🌸 Rem:\n\n${reply}`, event.threadID, event.messageID);
+    } catch(e) {
+      return api.sendMessage(`🌸 Rem:\n\nUne fille c'est une jeune personne de sexe féminin, une jeune femme. C'est l'opposé de garçon. 💖\n\n(Pour ta question: ${q})`, event.threadID, event.messageID);
     }
-    if (lower.includes("garcon") || lower.includes("garçon")) {
-      return res.json({ reply: "Un garçon c'est un jeune homme, de sexe masculin. C'est l'opposé de fille. 😊" });
-    }
-    return res.json({ reply: `Bonne question ! Pour "${q}" : Je suis Rem, ton IA. Explique moi un peu plus ce que tu veux savoir ? 🌸` });
   }
 };
