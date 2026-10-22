@@ -1,34 +1,54 @@
-const axios = require("axios");
-const API_REM = "https://rem-api.vercel.app/api/rem";
+// API REM - Créé pour toi
+export default async function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  
+  const message = req.query.message || req.query.q || "";
+  const uid = req.query.uid || "";
+  const CREATOR_ID = "61556932235241";
 
-module.exports = {
-  config: {
-    name: "rem",
-    version: "4.0",
-    author: "Dimu",
-    role: 0,
-    category: "ai",
-    guide: { fr: "rem <question>" }
-  },
-  onStart: async function({ api, event, args }) {
-    const q = args.join(" ").trim();
-    if (!q) return api.sendMessage("🌸 Oui ? Pose ta question !\nEx: rem c'est quoi une fille", event.threadID);
-    
-    try {
-      // 1. On essaie direct Pollinations (ça marche toujours)
-      const prompt = encodeURIComponent(q);
-      const res = await axios.get(`https://text.pollinations.ai/${prompt}?model=openai`, { timeout: 15000 });
-      let reply = typeof res.data === 'string' ? res.data : res.data?.choices?.[0]?.message?.content;
-      
-      // 2. Si ça échoue, on essaie ton API
-      if (!reply) {
-        const r2 = await axios.get(`${API_REM}?q=${encodeURIComponent(q)}`);
-        reply = r2.data?.reply;
-      }
-      
-      return api.sendMessage(`🌸 Rem:\n\n${reply}`, event.threadID, event.messageID);
-    } catch(e) {
-      return api.sendMessage(`🌸 Rem:\n\nUne fille c'est une jeune personne de sexe féminin, une jeune femme. C'est l'opposé de garçon. 💖\n\n(Pour ta question: ${q})`, event.threadID, event.messageID);
-    }
+  if (!message) {
+    return res.json({
+      status: true,
+      creator: "Rem-api",
+      usage: "/api/rem?message=salut&uid=ton_id",
+      example: "/api/rem?message=bonjour bb"
+    });
   }
-};
+
+  const isCreator = String(uid) === CREATOR_ID;
+  const system = isCreator 
+    ? "Tu es Rem, la petite copine amoureuse de ton créateur. Tu l'appelles mon chéri, bb. Douce, câline, jalouse mignonne."
+    : "Tu es Rem 🌸, IA gentille, mignonne et utile.";
+
+  try {
+    // Appel Pollinations
+    const response = await fetch("https://text.pollinations.ai/openai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "openai",
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: message }
+        ]
+      })
+    });
+    
+    const data = await response.json();
+    let reply = data.choices?.[0]?.message?.content;
+
+    if (!reply) reply = isCreator ? "Bug 2 sec mon chéri 😿 redis ? 💖" : "Oups redis moi ? 🌸";
+    if (isCreator && !reply.includes("💖")) reply += " 💖";
+
+    return res.json({
+      status: true,
+      input: message,
+      isCreator: isCreator,
+      result: reply,
+      framed: `💖 ࿇ ══━━✥◈✥━━══ ࿇ 💖\n\n${reply}\n\n💖 ࿇ ══━━✥◈✥━━══ ࿇ 💖`
+    });
+
+  } catch (e) {
+    return res.json({ status: false, error: e.message });
+  }
+      }
