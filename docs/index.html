@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<title>Rem API - Dashboard</title>
+<style>
+body{background:#020617;color:white;font-family:sans-serif;padding:20px}
+.card{background:#0f172a;padding:20px;border-radius:12px;margin:10px 0;border:1px solid #1e293b}
+a{color:#38bdf8}
+</style>
+</head>
+<body>
+<h1>Rem-api Dashboard Pro</h1>
+<div class="card">ENDPOINTS TOTAUX: <b id="total">0</b></div>
+<div class="card">CATEGORIES: <b id="cat">0</b></div>
+<div id="list"></div>
+
+<script>
+const apis = [
+  {name:"Rem", route:"/api/rem", category:"Image", method:"GET", desc:"Image de Rem"},
+  {name:"Hello", route:"/api/hello", category:"Test", method:"GET", desc:"API en ligne"},
+  {name:"Status", route:"/api/status", category:"System", method:"GET", desc:"Batterie / Date / Heure"}
+];
+
+document.getElementById('total').innerText = apis.length;
+document.getElementById('cat').innerText = [...new Set(apis.map(a=>a.category))].length;
+
+const list = document.getElementById('list');
+apis.forEach(api=>{
+  list.innerHTML += `<div class="card"><b>${api.method} - ${api.name}</b><br><small>${api.route}</small><br><small>${api.desc}</small><br><a href="${api.route}" target="_blank">Tester -></a></div>`;
+});
+</script>
+</body>
+</html>
